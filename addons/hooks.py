@@ -1,12 +1,14 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from . import __version__ as app_version
 
 app_name = "addons"
-app_title = "Addons"
-app_publisher = "digitalasiasolusindo@gmail.com"
-app_description = "Addons"
+app_title = "addons"
+app_publisher = "PT DAS"
+app_description = "addons ekatunggal"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
-app_email = "digitalasiasolusindo@gmail.com"
+app_email = "PT DAS"
 app_license = "MIT"
 
 # Includes in <head>
@@ -20,18 +22,29 @@ app_license = "MIT"
 # web_include_css = "/assets/addons/css/addons.css"
 # web_include_js = "/assets/addons/js/addons.js"
 
-# include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "addons/public/scss/website"
-
-# include js, css files in header of web form
-# webform_include_js = {"doctype": "public/js/doctype.js"}
-# webform_include_css = {"doctype": "public/css/doctype.css"}
-
 # include js in page
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+# fixtures = [
+#     {"dt": "Custom Field"},
+#     {"dt": "Custom Script"},
+#     {"dt": "Print Format"},
+#     {"dt": "Workflow"}
+# ]
+
+doctype_js = {
+	"Quotation" : "public/js/quotation.js",
+	"Sales Order" : "public/js/custom_sales_order.js",
+	"Purchase Order" : "public/js/custom_purchase_order.js",
+	"Delivery Note":"public/js/custom_delivery_note.js",
+	"Sales Invoice":"public/js/sales_invoice.js",
+	"Delivery Trip":"public/js/delivery_trip.js",
+	"Material Request":"public/js/custom_material_request.js",
+	"Stock Entry":"public/js/custom_stock_entry.js",
+	"Item":"public/js/custom_item.js",
+	
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -47,6 +60,9 @@ app_license = "MIT"
 #	"Role": "home_page"
 # }
 
+# Website user home page (by function)
+# get_website_user_home_page = "addons.utils.get_home_page"
+
 # Generators
 # ----------
 
@@ -58,12 +74,6 @@ app_license = "MIT"
 
 # before_install = "addons.install.before_install"
 # after_install = "addons.install.after_install"
-
-# Uninstallation
-# ------------
-
-# before_uninstall = "addons.uninstall.before_uninstall"
-# after_uninstall = "addons.uninstall.after_uninstall"
 
 # Desk Notifications
 # ------------------
@@ -83,25 +93,100 @@ app_license = "MIT"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
-# DocType Class
-# ---------------
-# Override standard doctype classes
-
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
-
 # Document Events
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-#	}
-# }
+doc_events = {
+	# "*": {
+	# 	"on_update": "method",
+	# 	"on_cancel": "method",
+	# 	"on_trash": "method"
+	# }
+	"Stock Entry":{
+		"validate" : "addons.custom_standard.custom_ste.check_expense",
+		"before_submit": "addons.custom_so.set_ste_dll"
+	},
+	"Request Retur":{
+		"before_submit": "addons.custom_so.set_ste_dll"
+	},
+	"Sales Order":{
+		"autoname" : "addons.custom_so.autoname_so",
+		"onload" : "addons.custom_so.net_stock_available",
+		"on_submit" : "addons.custom_so.set_bottom_price",
+		"before_submit": ["addons.custom_standard.custom_sales_invoice.check_max_min", "addons.custom_so.cek_qty_so_dengan_qty_qtn"],
+		"on_update": "addons.custom_so.set_sales_dll",
+		"on_update_after_submit": "addons.custom_so.set_sales_dll",
+		"validate": [
+			'addons.custom_method.validate_after_amend', 
+			"addons.custom_standard.custom_sales_invoice.check_max_min", 
+			# "addons.custom_standard.custom_sales_invoice.check_hpp"
+		],
+		"before_insert": "addons.custom_so.custom_on_insert"
+	},
+	"Purchase Order":{
+		"autoname" : "addons.custom_standard.custom_po.autoname_po",
+		"on_update": "addons.custom_so.set_purchase_dll",
+		"on_update_after_submit": "addons.custom_so.set_purchase_dll"
+		# "onload": "addons.custom_standard.custom_po.check_price_list",
+	},
+	"Journal Entry":{
+		"on_update": "addons.custom_so.set_journal_dll",
+		"on_update_after_submit": "addons.custom_so.set_journal_dll"
+	},
+	"Payment Entry":{
+		"on_update": "addons.custom_so.set_payment_dll",
+		"on_update_after_submit": "addons.custom_so.set_payment_dll"
+	},
+	"Delivery Note":{
+		"before_save": ["addons.custom_standard.custom_dn.custom_method_validate","addons.custom_standard.custom_confirmation_document.cek_bk"],
+		"validate": ["addons.custom_standard.custom_dn.custom_method_validate","addons.custom_standard.custom_sales_invoice.check_max_min","addons.custom_standard.custom_confirmation_document.cek_bk"],
+		"before_submit" : ["addons.custom_standard.custom_sales_invoice.check_max_min","addons.custom_standard.custom_dn.custom_method_submit","addons.custom_standard.custom_check_qty_sinv_dn.overwrite_status_updater","addons.custom_standard.custom_confirmation_document.cek_bk"],
+		"before_insert":["addons.custom_standard.custom_sales_invoice.check_max_min","addons.custom_so.custom_on_insert"]
+	},
+	"Sales Invoice":{
+		"autoname" : "addons.custom_so.autoname_sinv",
+		"onload":"addons.custom_so.custom_set_status",
+		"validate":["addons.custom_standard.custom_sales_invoice.check_max_min","addons.custom_standard.custom_sales_invoice.check_pajak_april"],
+		"before_submit" : ["addons.custom_standard.custom_check_qty_sinv_dn.overwrite_status_updater","addons.custom_standard.custom_sales_invoice.check_max_min"]
+	},
+	"Delivery Trip":{
+		"on_submit" : "addons.custom_standard.custom_delivery_trip.submit_delivery_notes"
+	},
+	"Purchase Receipt":{
+		"before_submit": "addons.custom_standard.custom_purchase_invoice.cek_image_item"
+	},
+	"Purchase Invoice":{
+		"validate" : "addons.custom_standard.custom_purchase_invoice.set_dimensi_item",
+		"on_update": "addons.custom_so.set_purchase_invoice_dll",
+		"on_update_after_submit": "addons.custom_so.set_purchase_invoice_dll",
+		"before_submit": "addons.custom_standard.custom_purchase_invoice.cek_image_item"
+	},
+	"Employee Advance":{
+		"before_submit" : "addons.custom_standard.custom_employee_advance.check_unfinished_advance"
+	},
+	"User": {
+		"on_update" : "addons.custom_standard.custom_user.check_role",
+	},
+	"Item Price": {
+		"validate" : "addons.custom_standard.custom_item_price.pasang_item_transaksi"
+	},
+	"Price List": {
+		"validate" : "addons.custom_standard.custom_item_price.pasang_item_transaksi"
+	},
+	"Confirmation Document": {
+		"before_submit": "addons.custom_standard.custom_confirmation_document.before_submit",
+		"on_update" : "addons.custom_standard.custom_confirmation_document.validate",
+		"on_trash" : "addons.custom_standard.custom_confirmation_document.on_trash"
+	},
+	"Quotation": {
+		"before_insert" : "addons.custom_standard.custom_quotation.bersih_bersih_ordered_qty"
+	},
+	"Form Potongan Harga":{
+		"on_submit":"addons.custom_standard.custom_potongan_harga.generate_journal",
+		"on_cancel":"addons.custom_standard.custom_potongan_harga.delete_journal"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
@@ -132,9 +217,10 @@ app_license = "MIT"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "addons.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.stock.get_item_details.get_item_details": "addons.custom_standard.custom_get_item_details.get_item_details",
+	"erpnext.stock.get_item_details.get_bin_details_and_serial_nos": "addons.custom_standard.custom_get_item_details.get_bin_details_and_serial_nos"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -143,46 +229,3 @@ app_license = "MIT"
 # 	"Task": "addons.task.get_dashboard_data"
 # }
 
-# exempt linked doctypes from being automatically cancelled
-#
-# auto_cancel_exempted_doctypes = ["Auto Repeat"]
-
-
-# User Data Protection
-# --------------------
-
-user_data_fields = [
-	{
-		"doctype": "{doctype_1}",
-		"filter_by": "{filter_by}",
-		"redact_fields": ["{field_1}", "{field_2}"],
-		"partial": 1,
-	},
-	{
-		"doctype": "{doctype_2}",
-		"filter_by": "{filter_by}",
-		"partial": 1,
-	},
-	{
-		"doctype": "{doctype_3}",
-		"strict": False,
-	},
-	{
-		"doctype": "{doctype_4}"
-	}
-]
-
-# Authentication and authorization
-# --------------------------------
-
-# auth_hooks = [
-# 	"addons.auth.validate"
-# ]
-
-# Translation
-# --------------------------------
-
-# Make link fields search translated document names for these DocTypes
-# Recommended only for DocTypes which have limited documents with untranslated names
-# For example: Role, Gender, etc.
-# translated_search_doctypes = []
